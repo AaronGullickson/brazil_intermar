@@ -1,0 +1,189 @@
+---
+title: "Figures for Patterns of Racial and Educational Assortative Mating in Brazil"
+output:
+  html_document:
+    fig_width: 8
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+mytheme <- theme(panel.grid.major = element_line(colour = "NA"),panel.grid.minor = element_line(colour = NA),
+                 panel.background = element_rect(fill='white', colour = 'black'), legend.position="none")
+source("analysis.R")
+```
+
+```{r fig1, echo=FALSE, fig.cap="**Figure 1:** Odds ratio of racially exogamous marriage in Brazil and the United States in 2000 among couples where the husband was 25–35 years of age. Estimates are based on samples from each country’s 2000 census. A logarithmic scale is used. Error bars are trivially small and are not shown"}
+lOR <- data.frame(lOR=c(-7.82, lOR.wb,lOR.wr,lOR.br),
+                  marriage=as.factor(c("USA\nWhite/Black","Brazil\nWhite/Black",
+                                       "Brazil\nWhite/Brown","Brazil\nBrown/Black")))
+lOR$marriage <- relevel(lOR$marriage,"Brazil\nBrown/Black")
+lOR$marriage <- relevel(lOR$marriage,"Brazil\nWhite/Brown")
+lOR$marriage <- relevel(lOR$marriage,"Brazil\nWhite/Black")
+lOR$marriage <- relevel(lOR$marriage,"USA\nWhite/Black")
+lOR$OR <- exp(lOR$lOR)
+g <- ggplot(lOR, aes(x=marriage, y=OR), stat=identity)
+g + geom_point(size=3)+
+ mytheme+
+ ylab("odds ratio of exogamous union")+
+ scale_y_log10()
+```
+
+```{r fig2, echo=FALSE, fig.cap="**Figure 2:** Bayesian information criterion (BIC) statistic compared with the saturated models for different loglinear models fit to Brazilian marriage data. Lower values indicate superior fit. Black bars indicate the case where browns and blacks are collapsed into a single category. Gray bars indicate the case where browns and blacks are treated separately"}
+get.bic <- function(model) {
+  return(model$deviance - (model$df.residual * log(sum(model$fitted.values)+sum(model$residuals))))
+}
+
+get.bic0 <- function(model) {
+  return((model$deviance-model$null.deviance) + (model$df.null - model$df.residual) * log(sum(model$fitted.values)+sum(model$residuals)))
+}
+
+BIC <-  data.frame(groups=as.factor(c(rep("White and non-White",4), rep("White, Brown, and Black", 4))),
+             model=as.factor(rep(c("Baseline Model", "+Dyadic Exchange", "+Market Exchange", 
+                                   "+Dyadic Exchange\n+Market Exchange"),2)),
+             BIC=as.numeric(lapply(list(basemodel4.wb, semodel4.wb, ebomodel4.wb, ebmodel4.wb,
+                             basemodel4.full, semodel4.full, ebomodel4.full, ebmodel4.full),
+                                   get.bic)))
+BIC$model <- relevel(BIC$model,"+Dyadic Exchange\n+Market Exchange")
+BIC$model <- relevel(BIC$model,"+Market Exchange")
+BIC$model <- relevel(BIC$model,"+Dyadic Exchange")
+BIC$model <- relevel(BIC$model,"Baseline Model")
+BIC$BIC <- round(BIC$BIC, 0)
+
+adjust <- c(rep(-0.1,4),rep(1.1,4))
+
+g <- ggplot(BIC, aes(x=model, fill=groups, y=BIC))
+g + geom_bar(stat="identity", position="dodge")+
+  xlab("")+
+  scale_fill_grey()+
+  geom_text(aes(x=model,y=BIC,label=paste(BIC)), position=position_dodge(width=1), vjust=adjust)+
+  mytheme+
+  theme(legend.position="bottom")
+```
+
+```{r fig3, echo=FALSE, fig.cap="**Figure 3:** Log odds ratios of an interracial marriage in Brazil for unions in which the white spouse is educationally hypergamous or hypogamous relative to a homogamous union. Values are based on log-linear models with and without market exchange parameters in which all brown and black individuals are collapsed into a single nonwhite category. Error bars indicate 95 % confidence intervals"}
+secoefWB <- rbind(summary(semodel4.wb)$coef[c("SEBMWFUpTRUE","SEBMWFDownTRUE","SEWMBFUpTRUE","SEWMBFDownTRUE"),1:2], 
+                  summary(ebmodel4.wb)$coef[c("SEBMWFUpTRUE","SEBMWFDownTRUE","SEWMBFUpTRUE","SEWMBFDownTRUE"),1:2])
+colnames(secoefWB) <- c("Coefficient","error")
+rownames(secoefWB) <- NULL
+secoefWB <- as.data.frame(secoefWB)
+secoefWB$couple <- as.factor(rep(c("Non-White Man/White Woman","Non-White Man/White Woman",
+                                        "White Man/Non-White Woman", "White Man/Non-White Woman")
+                                      ,2))
+secoefWB$parameter <- as.factor(rep(rep(c("White Hypergamy","White Hypogamy"),2),2))
+secoefWB$controls <- as.factor(c(rep("w/o Market Exchange Terms",4),rep("with Market Exchange Terms",4)))
+
+g <- ggplot(secoefWB, aes(parameter, Coefficient,
+                          ymin = Coefficient-1.96*error, ymax=Coefficient+1.96*error))
+
+g + geom_point(size=4, position=position_dodge(width=0.5)) + 
+  geom_errorbar(width=0.1, position=position_dodge(width=0.5)) + 
+  facet_grid(controls~couple)+
+  mytheme+
+  geom_hline(aes(yintercept=0), linetype=2, colour="grey")+ 
+  scale_colour_grey()+
+  ylab("log odds ratio of interracial marriage")
+```
+
+```{r fig4, echo=FALSE, fig.cap="**Figure 4:** Log-odds ratio of interracial marriage in Brazil for each spouse type when education increases one category. Values are based on log-linear models in which all brown and black individuals have been collapsed into a single nonwhite category. Error bars indicate 95 % confidence intervals"}
+ebcoefWB <- summary(ebmodel4.wb)$coef[16:31,1:2]
+colnames(ebcoefWB) <- c("Coefficient","error")
+rownames(ebcoefWB) <- NULL
+ebcoefWB <- as.data.frame(ebcoefWB)
+ebcoefWB$race <- as.factor(c(rep("Non-White Man",4),rep("White Woman",4),rep("White Man",4),rep("Non-White Woman",4)))
+ebcoefWB$barrier <- as.factor(rep(c("Primary Grad v. Incomplete Primary", "Lower Secondary v. Primary Grad", "Upper Secondary v. Lower Secondary", "Some College v. Upper Secondary"), 4))
+
+ebcoefWB$race <- relevel(ebcoefWB$race,"White Woman")
+ebcoefWB$race <- relevel(ebcoefWB$race,"White Man")
+ebcoefWB$race <- relevel(ebcoefWB$race,"Non-White Woman")
+ebcoefWB$race <- relevel(ebcoefWB$race,"Non-White Man")
+
+ebcoefWB$barrier <- relevel(ebcoefWB$barrier, "Some College v. Upper Secondary")
+ebcoefWB$barrier <- relevel(ebcoefWB$barrier, "Upper Secondary v. Lower Secondary")
+ebcoefWB$barrier <- relevel(ebcoefWB$barrier, "Lower Secondary v. Primary Grad")
+ebcoefWB$barrier <- relevel(ebcoefWB$barrier, "Primary Grad v. Incomplete Primary")
+
+g <- ggplot(ebcoefWB, aes(barrier, Coefficient,
+                               ymin = Coefficient-1.96*error, ymax=Coefficient+1.96*error))
+g + geom_point(size=3, position=position_dodge(width=0.5)) + 
+  geom_errorbar(width=0.1, position=position_dodge(width=0.5)) + 
+  facet_wrap(~race)+geom_hline(aes(yintercept=0), linetype=2, colour="grey")+ 
+  scale_colour_grey()+ 
+  coord_flip()+
+  ylab("log odds ratio of interracial marriage")+
+  mytheme
+```
+
+```{r fig5, echo=FALSE, fig.cap="**Figure 5:** Log odds ratios of an interracial marriage in Brazil for unions in which the lighter spouse is educationally hypergamous or hypogamous relative to a homogamous union. Values are based on log-linear models with and without market exchange parameters. Error bars indicate 95 % confidence intervals"}
+secoef <- rbind(summary(semodel4.full)$coef[c("SEBMWFUpTRUE","SEBMWFDownTRUE","SEWMBFUpTRUE","SEWMBFDownTRUE",
+                                              "SERMWFUpTRUE","SERMWFDownTRUE","SEWMRFUpTRUE","SEWMRFDownTRUE",
+                                              "SEBMRFUpTRUE","SEBMRFDownTRUE","SERMBFUpTRUE","SERMBFDownTRUE"),
+                                            1:2], 
+                summary(ebmodel4.full)$coef[c("SEBMWFUpTRUE","SEBMWFDownTRUE","SEWMBFUpTRUE","SEWMBFDownTRUE",
+                                              "SERMWFUpTRUE","SERMWFDownTRUE","SEWMRFUpTRUE","SEWMRFDownTRUE",
+                                              "SEBMRFUpTRUE","SEBMRFDownTRUE","SERMBFUpTRUE","SERMBFDownTRUE"),
+                                            1:2])
+colnames(secoef) <- c("Coefficient","error")
+rownames(secoef) <- NULL
+secoef<- as.data.frame(secoef)
+secoef$couple <- as.factor(rep(c("Black Man/White Woman","Black Man/White Woman","White Man/Black Woman", "White Man/Black Woman",
+                                 "Brown Man/White Woman", "Brown Man/White Woman", "White Man/Brown Woman", "White Man/Brown Woman",
+                                "Black Man/Brown Woman", "Black Man/Brown Woman", "Brown Man/Black Woman", "Brown Man/Black Woman"),2))
+secoef$parameter <- as.factor(rep(c("Lighter\nHypergamy","Lighter\nHypogamy"),12))
+secoef$controls <- as.factor(c(rep("w/o Market Exchange Terms",12),rep("with Market Exchange Terms",12)))
+
+secoef$couple <- relevel(secoef$couple, "Brown Man/Black Woman")
+secoef$couple <- relevel(secoef$couple, "White Man/Brown Woman")
+secoef$couple <- relevel(secoef$couple, "White Man/Black Woman")
+secoef$couple <- relevel(secoef$couple, "Black Man/Brown Woman")
+secoef$couple <- relevel(secoef$couple, "Brown Man/White Woman")
+secoef$couple <- relevel(secoef$couple, "Black Man/White Woman")
+
+g <- ggplot(secoef, aes(parameter, Coefficient, 
+                        ymin = Coefficient-1.96*error, ymax=Coefficient+1.96*error))
+g + geom_point(size=3, position=position_dodge(width=0.5)) +
+  geom_errorbar(width=0.1, position=position_dodge(width=0.5)) + 
+  facet_grid(controls~couple)+
+  geom_hline(aes(yintercept=0), linetype=2, colour="grey")+ 
+  scale_color_grey()+xlab("")+
+  ylab("log odds ratio of interracial marriage")+
+  mytheme
+```
+
+```{r fig6, echo=FALSE, fig.cap="**Figure 6:** Log-odds ratio of interracial marriage in Brazil for each spouse type when education increases one category. Values are based on log-linear models with separate categories for white, brown, and black. Error bars indicate 95 % confidence intervals"}
+ebcoef <- summary(ebmodel4.full)$coef[26:73,1:2]
+colnames(ebcoef) <- c("Coefficient","error")
+rownames(ebcoef) <- NULL
+ebcoef <- as.data.frame(ebcoef)
+ebcoef$couple <- as.factor(c(rep("White/Black",16),rep("Brown/Black",16),rep("White/Brown",16)))
+ebcoef$color <- as.factor(c(rep("Darker Man",4),rep("Lighter Woman",4), rep("Lighter Man",4),rep("Darker Woman",4),
+				  rep("Darker Man",4),rep("Lighter Woman",4), rep("Darker Woman",4),rep("Lighter Man",4),
+				  rep("Darker Man",4),rep("Lighter Woman",4), rep("Darker Woman",4),rep("Lighter Man",4)))
+ebcoef$gender <- as.factor(c(rep("Male",4),rep("Female",4), rep("Male",4),rep("Female",4),
+				  rep("Male",4),rep("Female",4), rep("Female",4),rep("Male",4),
+				  rep("Male",4),rep("Female",4), rep("Female",4),rep("Male",4)))
+ebcoef$barrier <- as.factor(rep(c("Primary Grad v. Incomplete Primary", "Lower Secondary v. Primary Grad", "Upper Secondary v. Lower Secondary", "Some College v. Upper Secondary"), 12))
+ebcoef$Model <- "Pooled"
+
+ebcoef$barrier <- relevel(ebcoef$barrier, "Some College v. Upper Secondary")
+ebcoef$barrier <- relevel(ebcoef$barrier, "Upper Secondary v. Lower Secondary")
+ebcoef$barrier <- relevel(ebcoef$barrier, "Lower Secondary v. Primary Grad")
+ebcoef$barrier <- relevel(ebcoef$barrier, "Primary Grad v. Incomplete Primary")
+
+ebcoef$couple <- relevel(ebcoef$couple, "White/Brown")
+ebcoef$couple <- relevel(ebcoef$couple, "White/Black")
+
+
+g <- ggplot(ebcoef, aes(barrier, Coefficient, color=Model, 
+                        ymin = Coefficient-1.96*error, ymax=Coefficient+1.96*error))
+g + geom_point(size=2, position=position_dodge(width=0.5)) + 
+  geom_errorbar(width=0.1, position=position_dodge(width=0.5)) + 
+  facet_grid(couple~color)+
+  geom_hline(aes(yintercept=0), linetype=2, colour="grey") + 
+  scale_colour_grey()+ 
+  coord_flip()+
+  ylab("log odds ratio of interracial marriage") +
+  coord_flip()+
+  mytheme
+```

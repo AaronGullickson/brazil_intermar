@@ -1,0 +1,188 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/aarong/Research/Github_reps/brazil_intermar/logs/log_getagg
+> data.txt
+  log type:  text
+ opened on:  20 Sep 2016, 13:50:41
+
+. 
+. use input/brazil, clear
+
+. 
+. *identify cohabitors
+. generate cohab = marsth==220
+
+. 
+. *age restriction: husband 25-35 and wife 14-60
+. keep if agem>=25 & agem<=35 & agef>=14 & agef<=60
+(765,624 observations deleted)
+
+. 
+. *drop if missing values
+. drop if racem==. | racef==. | edfm==. | edff==.
+(18,379 observations deleted)
+
+. 
+. *collapse educational categories into a smaller set
+. gen edf = 1
+
+. replace edf = 2 if edff==2
+(73,757 real changes made)
+
+. replace edf = 3 if edff==3 | edff==4
+(153,755 real changes made)
+
+. replace edf = 4 if edff==5
+(121,653 real changes made)
+
+. replace edf = 5 if edff==6
+(33,113 real changes made)
+
+. table edff edf
+
+--------------------------------------------------------
+educ_att_s |
+hort_femal |                     edf                    
+e_partner  |       1        2        3        4        5
+-----------+--------------------------------------------
+      noed |  24,625                                    
+  someprim |  73,472                                    
+  primgrad |           73,757                           
+   somemid |                   104,420                  
+   midgrad |                    49,335                  
+highschool |                            121,653         
+   postsec |                                      33,113
+--------------------------------------------------------
+
+. 
+. gen edm = 1
+
+. replace edm = 2 if edfm==2
+(74,190 real changes made)
+
+. replace edm = 3 if edfm==3 | edfm==4
+(148,723 real changes made)
+
+. replace edm = 4 if edfm==5
+(104,174 real changes made)
+
+. replace edm = 5 if edfm==6
+(30,416 real changes made)
+
+. table edfm edm
+
+--------------------------------------------------------
+educ_att_s |
+hort_male_ |                     edm                    
+partner    |       1        2        3        4        5
+-----------+--------------------------------------------
+      noed |  39,044                                    
+  someprim |  83,828                                    
+  primgrad |           74,190                           
+   somemid |                    98,387                  
+   midgrad |                    50,336                  
+highschool |                            104,174         
+   postsec |                                      30,416
+--------------------------------------------------------
+
+. *we do not put labels on these so that we can treat them as scalars
+. *in R easier, when necessary
+. 
+. *rename the key variables to be consistent with model presentation
+. rename racem HR
+
+. rename racef WR
+
+. rename edm HE
+
+. rename edf WE
+
+. 
+. *shorter race labels
+. label drop racedef
+
+. label define racedef 1 "W" 2 "Br" 3 "Bl"
+
+. label values HR racedef
+
+. label values WR racedef
+
+. 
+. *adjust weights so that they correctly sum to sample size
+. egen wtmean = mean(wtperm)
+
+. replace wtperm = wtperm/wtmean
+(480,375 real changes made)
+
+. 
+. *save this data temporarily, so I can aggregate it different ways
+. save temp, replace
+(note: file temp.dta not found)
+file temp.dta saved
+
+. 
+. *aggregate the data
+. collapse (sum) wtperm, by(HR WR HE WE cohab)
+
+. rename wtperm Freq
+
+. 
+. *export it to csv
+. export delimited HR WR HE WE Freq using output/table_marriages.csv if !cohab,
+>  replace
+(note: file output/table_marriages.csv not found)
+file output/table_marriages.csv saved
+
+. export delimited HR WR HE WE Freq using output/table_cohabs.csv if cohab, rep
+> lace
+(note: file output/table_cohabs.csv not found)
+file output/table_cohabs.csv saved
+
+. 
+. *now do the same but collapse to white and black
+. use temp, replace
+
+. 
+. replace HR=2 if HR==3
+(33,299 real changes made)
+
+. replace WR=2 if WR==3
+(26,565 real changes made)
+
+. 
+. label drop racedef
+
+. label define racedef 1 "W" 2 "Bl"
+
+. label values HR racedef
+
+. label values WR racedef
+
+. 
+. collapse (sum) wtperm, by(HR WR HE WE cohab)
+
+. rename wtperm Freq
+
+. 
+. *export it to csv
+. export delimited HR WR HE WE Freq using output/tableWB_marriages.csv if !coha
+> b, replace
+(note: file output/tableWB_marriages.csv not found)
+file output/tableWB_marriages.csv saved
+
+. export delimited HR WR HE WE Freq using output/tableWB_cohabs.csv if cohab, r
+> eplace
+(note: file output/tableWB_cohabs.csv not found)
+file output/tableWB_cohabs.csv saved
+
+. 
+. erase temp.dta
+
+. 
+. log close
+      name:  <unnamed>
+       log:  /Users/aarong/Research/Github_reps/brazil_intermar/logs/log_getagg
+> data.txt
+  log type:  text
+ closed on:  20 Sep 2016, 13:50:44
+-------------------------------------------------------------------------------
