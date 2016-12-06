@@ -1,6 +1,7 @@
 ---
 title: "Figures for Patterns of Racial and Educational Assortative Mating in Brazil"
 output:
+  pdf_document: default
   html_document:
     fig_width: 8
 ---
