@@ -25,6 +25,8 @@
 # ebmodel - both dyadic and market exchange terms
 ########################################################
 
+#This is an example comment for Sociology 512, Winter 2018
+
 #load the data
 data <- read.csv("output/table_marriages.csv")
 dataWB <- read.csv("output/tableWB_marriages.csv")
